@@ -23,7 +23,7 @@ define Package/ui-8800-10
   CATEGORY:=LuCI
   SUBMENU:=3. Applications
   $(call Package/luci/webtemplate)
-  DEPENDS+=+luci +#################################################
+  DEPENDS+=+luci +luci-app-80211 +luci-app-bellbeacons
   TITLE:=8800 User Interface v1.0
 endef
 
@@ -45,8 +45,6 @@ endef
 
 define Package/ui-8800-10/install
 
-###################################first install xiaomi ui
-
 	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/controller
 	$(INSTALL_DATA) ./files/80211_ctrl.lua $(1)/usr/lib/lua/luci/controller/80211_ctrl.lua
 	$(INSTALL_DATA) ./files/bellbeacons.lua $(1)/usr/lib/lua/luci/controller/bellbeacons.lua
@@ -61,8 +59,12 @@ define Package/ui-8800-10/install
 	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/view
 	$(INSTALL_DATA) ./files/sysauth.htm $(1)/usr/lib/lua/luci/view/sysauth.htm
 
-	#####$(INSTALL_DIR) $(1)/www/luci-static/openwrt.org/img
-	#########$(INSTALL_DATA) ./files/logo.png $(1)/www/luci-static/openwrt.org/img/logo.png
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/view/themes/openwrt.org
+	$(INSTALL_DATA) ./files/header.htm $(1)/usr/lib/lua/luci/view/themes/openwrt.org/header.htm
+	$(INSTALL_DATA) ./files/footer.htm $(1)/usr/lib/lua/luci/view/themes/openwrt.org/footer.htm
+
+	$(INSTALL_DIR) $(1)/www/luci-static/openwrt.org/
+	$(CP) ./openwrt.org/* $(1)/www/luci-static/openwrt.org/
 endef
 
 $(eval $(call BuildPackage,ui-8800-10))
