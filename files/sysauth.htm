@@ -1,0 +1,194 @@
+<%#
+LuCI - Lua Configuration Interface
+Copyright 2008 Steven Barth <steven@midlink.org>
+Copyright 2008 Jo-Philipp Wich <xm@leipzig.freifunk.net>
+Copyright 2012 David Menting <david@nut-bolt.nl>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+-%>
+<%
+	local sys  = require "luci.sys"
+	local http = require "luci.http"
+	local disp = require "luci.dispatcher"
+
+	local hostname = sys.hostname()
+
+	local request  = disp.context.path
+	local request2 = disp.context.request
+
+	local category = request[1]
+	local cattree  = category and disp.node(category)
+
+	local leaf = request2[#request2]
+
+	local tree = disp.node()
+	local node = disp.context.dispatched
+
+	local categories = disp.node_childs(tree)
+
+	local c = tree
+	local i, r
+
+	-- tag all nodes leading to this page
+	for i, r in ipairs(request) do
+		if c.nodes and c.nodes[r] then
+			c = c.nodes[r]
+			c._menu_selected = true
+		end
+	end
+    
+    -- send as HTML5
+	http.prepare_content("text/html")
+
+	local function nodeurl(prefix, name, query)
+		local url = controller .. prefix .. name .. "/"
+		if query then
+			url = url .. http.build_querystring(query)
+		end
+		return pcdata(url)
+	end
+
+	local function subtree(prefix, node, level)
+		if not level then
+			level = 1
+		end
+
+		local childs = disp.node_childs(node)
+		if #childs > 0 then
+        
+            if level > 2 then
+%>
+	<ul class="tabs">
+		<%  
+            end
+
+			local selected_node
+			local selected_name
+			local i, v
+
+			for i, v in ipairs(childs) do
+				local nnode = node.nodes[v]
+				if nnode._menu_selected then
+					selected_node = nnode
+					selected_name = v
+				end
+                if level > 2 then
+		%>
+			<li class="tabmenu-item-<%=v%><%- if nnode._menu_selected or (node.leaf and v == leaf) then %> active<% end %>">
+			    <a href="<%=nodeurl(prefix, v, nnode.query)%>"><%=striptags(translate(nnode.title))%></a>
+			</li>
+		<%      end
+			end
+            
+            if level > 2 then
+		%>
+	</ul>
+<%          end
+
+			if selected_node then
+				subtree(prefix .. selected_name .. "/", selected_node, level + 1)
+			end
+		end
+	end
+-%>
+<!DOCTYPE html>
+<html lang="<%=luci.i18n.context.lang%>">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="">
+	<meta name="author" content="">
+                      
+  
+  
+  <title><%=striptags( hostname .. ( (node and node.title) and ' - ' .. translate(node.title) or '')) %> -  LuCI</title>
+  <!--[if lt IE 9]><script src="<%=media%>/html5.js"></script><![endif]-->
+  <link rel="stylesheet" href="<%=media%>/cascade.css">
+<!--xiaomi css -->
+  <link rel="stylesheet" href="<%=media%>/bc.css">
+  <link rel="stylesheet" href="<%=media%>/login.css">
+<!--Bootstrap Core JavaScript -->
+  <link rel="stylesheet" href="<%=media%>/bootstrap.min.css">
+  <link rel="stylesheet" href="<%=media%>/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="<%=media%>/sb-admin.css">
+  <link rel="stylesheet" href="<%=media%>/plugins/morris.css">
+<!--jQuery -->
+  <link rel="stylesheet" href="<%=media%>/jquery.js">
+<!--Morros Charts JavaScript -->
+  <link rel="stylesheet" href="<%=media%>/plugins/morris/raphael.min.js">
+  <link rel="stylesheet" href="<%=media%>/plugins/morris/morris.min.js">
+  <link rel="stylesheet" href="<%=media%>/plugins/morris/morris-data.js">
+
+  <link rel="shortcut icon" href="<%=media%>/favicon.ico">
+  <% if node and node.css then %><link rel="stylesheet" href="<%=resource%>/<%=node.css%>">
+  <% end -%>
+  <% if css then %><style title="text/css">
+  <%-= css %>
+  </style>
+  <% end -%>
+  <script src="<%=resource%>/xhr.js"></script>
+</head>
+
+<body>
+  <div id="doc">
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+	<!-- Brand and toggle get grouped for better mobile display -->
+	<div class="navbar-header">
+		<img style="vertical-align:middle;margin-left: 10px;" src="<%=media%>/img/logo.png" height="50"></img>
+		<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+		</button>
+	</div>
+	
+   </nav>
+
+
+<div id="doc">
+	<div id="bd">
+		<div class="mod-login">
+                        		<br />                                                                           
+			<div class="title">
+			</div>
+			<div class="pic">
+			</div>
+			<form  method="post" class="form-login" action="<%=pcdata(luci.http.getenv("REQUEST_URI"))%>">
+				<div class="cbi-map-descr">                                            
+                        		<%:Please enter your password.%>                  
+                        		<%- if fuser then %>                                           
+                        		<div class="error"><%:Invalid password! Please try again.%></div>
+                        		<br />                                                                           
+                	        	<% end -%>                                                                       
+				</div>                                                                                   
+                       		<div class="form-item">                                                          
+                          		<input name="username" value="<%=duser%>" style="display:none;"/>
+              			</div>                                                                                         
+               			<div class="form-item">                                                         
+					<span class="v"><input id="focus_password" class="ipt-text" type="password" name="password" autocomplete="off" placeholder="Password" reqmsg="Please input password"></span>
+						<em class="t"></em>
+              			</div>                                                                                                  
+                        		<br />                                                                           
+				<div>                                                                                                                   
+					<input type="submit" value="<%:Login%>" class="cbi-button cbi-button-apply" />                                  
+					<input type="reset" value="<%:Reset%>" class="cbi-button cbi-button-reset" />                                   
+				</div>
+			</form>
+		</div>	
+	</div>	
+	<div id="ft">
+		<p> &copy; Bellnet<span>|</span><a href="http://www.bellnett.com/" target="_blank">Support</a><span>|</span>Tel: 0510-85342727</p><p>
+	</p></div>	
+	
+   <div>
+<div>
+
+</body>
+</html>
